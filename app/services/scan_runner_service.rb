@@ -2,112 +2,125 @@
 
 require 'open3'
 require 'rest-client'
+require 'shellwords'
 
 class ScanRunnerService
-  attr_reader :scan_id, :target_url, :scan_tool_name, :scan_parameters, :callback_url
+  class InvalidParamsError < StandardError; end
 
-  # Cấu hình các Docker images
-  SCAN_TOOLS = {
-    'ZAP' => {
-      image: 'owasp/zap2docker-stable',
-      command_template: lambda { |target, output_file|
-        "zap.sh -cmd -port 8080 -host 0.0.0.0 -daemon -config api.disablekey=true " +
-          "-target #{target} -json #{output_file} -T 30 -quickurl #{target}"
-      },
-      output_parser: ->(output_path) { ReportParserService.parse_zap_json(output_path) }
-    },
-    'NIKTO' => {
-      image: 'alpine/nikto',
-      command_template: lambda { |target, output_file|
-        "nikto.pl -h #{target} -o #{output_file} -Format json"
-      },
-      output_parser: ->(output_path) { ReportParserService.parse_nikto_json(output_path) }
-    }
+  SCANNERS = {
+    "NUCLEI" => Scanners::NucleiService,
+    "ZAP"    => Scanners::ZapService,
+    "NIKTO"  => Scanners::NiktoService
   }.freeze
 
-  def initialize(scan_id, target_url, scan_tool_name, scan_parameters, callback_url)
-    @scan_id = scan_id
-    @target_url = target_url
-    @scan_tool_name = scan_tool_name.upcase
-    @scan_parameters = JSON.parse(scan_parameters) rescue {}
-    @callback_url = callback_url
-    @docker_socket_path = '/var/run/docker.sock'
-    @output_dir = "/tmp/scan_results/#{scan_id}"
+  def initialize(params)
+    @scan_id       = params[:scan_id]
+    @target_url    = params[:target_url]
+    @scan_tools    = Array(params[:scan_tools]).map(&:upcase)
+    @callback_url  = params[:callback_url]
+    @scan_parameters = params[:scan_parameters] || {}
+
+    validate_params!
   end
 
-  def run
-    tool_config = SCAN_TOOLS[@scan_tool_name]
-    unless tool_config
-      Rails.logger.error "Scan tool '#{@scan_tool_name}' not configured."
-      send_callback('FAILED', "Scan tool '#{@scan_tool_name}' not configured.", [])
-      return
-    end
-    # Tạo thư mục cục bộ để mount và lưu báo cáo
-    FileUtils.mkdir_p(@output_dir) unless File.directory?(@output_dir)
-    report_file_name = "#{@scan_tool_name.downcase}_report.json"
-    full_output_path_on_host = File.join(@output_dir, report_file_name)
-    output_path_in_container = "/app/#{report_file_name}" # Đường dẫn bên trong container quét
+  def run_all_scans
+    results = {}
 
-    docker_run_command = build_docker_command(tool_config, output_path_in_container)
+    @scan_tools.each do |tool_name|
+      tool_key = tool_name.downcase
+      begin
+        scanner_class = SCANNERS[tool_name]
+        unless scanner_class
+          results[tool_key] = { status: "FAILED", error: "Scanner '#{tool_name}' not supported" }
+          next
+        end
 
-    Rails.logger.info "Executing Docker command for Scan ID #{@scan_id}: #{docker_run_command}"
+        Rails.logger.info "Starting #{tool_name} scan for Scan ID #{@scan_id}"
 
-    stdout_str, stderr_str, status = Open3.capture3(docker_run_command)
+        scanner = scanner_class.new(
+          target_url: @target_url,
+          scan_id: @scan_id,
+          parameters: @scan_parameters[tool_key] || {}
+        )
 
-    if status.success?
-      Rails.logger.info "Docker command for Scan ID #{@scan_id} completed successfully."
-      # Đọc và phân tích báo cáo từ file đã mount
-      if File.exist?(full_output_path_on_host)
-        raw_results = tool_config[:output_parser].call(full_output_path_on_host)
-        send_callback('COMPLETED', nil, raw_results)
-      else
-        error_msg = "Report file not found at #{full_output_path_on_host}"
-        Rails.logger.error error_msg
-        send_callback('FAILED', error_msg, [])
+        result = scanner.run
+
+        if result[:success]
+          results[tool_key] = {
+            status: "COMPLETED",
+            summary: result.dig(:data, :summary),
+            target_updates: result.dig(:data, :target_updates),
+            vulnerabilities: result.dig(:data, :vulnerabilities) || []
+          }
+        else
+          results[tool_key] = {
+            status: "FAILED",
+            error: result[:error] || "Unknown error"
+          }
+        end
+
+      rescue StandardError => e
+        Rails.logger.error "Scanner #{tool_name} crashed: #{e.message}"
+        results[tool_key] = { status: "FAILED", error: "Internal Scanner Error: #{e.message}" }
       end
-    else
-      error_msg = "Docker command for Scan ID #{@scan_id} failed. Error: #{stderr_str}"
-      Rails.logger.error error_msg
-      send_callback('FAILED', error_msg, [])
     end
-  ensure
-    # Dọn dẹp thư mục kết quả tạm thời
-    FileUtils.remove_dir(@output_dir) if File.directory?(@output_dir)
+
+    final_status = determine_final_status(results)
+    send_callback(final_status, results)
+    results
   end
 
   private
 
-  # Xây dựng lệnh run docker
-  def build_docker_command(tool_config, output_path_in_container)
-    image = tool_config[:image]
-    docker_prefix = "docker run --rm " +
-                    "-v #{@docker_socket_path}:#{@docker_socket_path} " +
-                    "-v #{@output_dir}:/app " +
-                    "--network host " +
-                    "#{image}"
+  def determine_final_status(results)
+    statuses = results.values.map { |r| r[:status] }
 
-    # Build lệnh cụ thể của công cụ quét
-    scan_command = tool_config[:command_template].call(@target_url, output_path_in_container)
-
-    "#{docker_prefix} #{scan_command}"
+    if statuses.all?("COMPLETED")
+      "COMPLETED"
+    elsif statuses.all?("FAILED")
+      "FAILED"
+    else
+      "PARTIAL"
+    end
   end
 
-  # Gửi callback về Web Service
-  def send_callback(status, error_message, raw_results)
+  def validate_params!
+    raise InvalidParamsError, "scan_id is required" if @scan_id.blank?
+    raise InvalidParamsError, "target_url is required" if @target_url.blank?
+    unless @target_url =~ /\Ahttps?:\/\/[\S]+\z/
+      raise InvalidParamsError, "Target URL format is invalid (must start with http:// or https://)"
+    end
+    raise InvalidParamsError, "scan_tools must be an array" unless @scan_tools.is_a?(Array)
+    raise InvalidParamsError, "scan_tools cannot be empty" if @scan_tools.empty?
+    raise InvalidParamsError, "callback_url is required" if @callback_url.blank?
+
+    invalid_tools = @scan_tools - SCANNERS.keys
+    unless invalid_tools.empty?
+      raise InvalidParamsError, "Unsupported scan tools: #{invalid_tools.join(', ')}"
+    end
+  end
+
+  def send_callback(final_status, tool_results)
     payload = {
       scanId: @scan_id,
-      status: status,
-      rawResults: raw_results,
-      errorMessage: error_message
-    }.to_json
+      status: final_status,
+      completedAt: Time.now.iso8601,
+      results: tool_results
+    }
 
     begin
-      RestClient.post(@callback_url, payload, content_type: :json, accept: :json)
-      Rails.logger.info "Sent callback for Scan ID #{@scan_id} with status #{status} to #{@callback_url}"
+      response = RestClient.post(
+        @callback_url,
+        payload.to_json,
+        content_type: :json,
+        accept: :json,
+        timeout: 30
+      )
+      Rails.logger.info "Callback sent successfully for Scan ID #{@scan_id} → #{final_status}"
     rescue RestClient::ExceptionWithResponse => e
-      Rails.logger.error "Failed to send callback for Scan ID #{@scan_id}: #{e.message} - Response: #{e.response}"
-    rescue RestClient::Exception => e
-      Rails.logger.error "Failed to send callback for Scan ID #{@scan_id}: #{e.message}"
+      Rails.logger.error "Callback failed (response): #{e.message} | Body: #{e.response&.body}"
+    rescue => e
+      Rails.logger.error "Callback failed (exception): #{e.class} - #{e.message}"
     end
   end
 end
