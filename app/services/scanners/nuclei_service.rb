@@ -1,25 +1,19 @@
 # frozen_string_literal: true
 require 'open3'
 require 'json'
+
 module Scanners
   class NucleiService
-    def initialize(target_url, scan_id)
+    def initialize(target_url:, scan_id:, parameters: {})
       @target_url = target_url
       @scan_id = scan_id
+      @parameters = parameters || {}
     end
 
     def run
-      cmd = [
-        "docker", "run", "--rm",
-        "-i",
-        "projectdiscovery/nuclei:latest",
-        "-u", @target_url,
-        "-jsonl",
-        "-silent",
-        "-nc"
-      ]
+      cmd = build_command
+      Rails.logger.info("Running NUCLEI | Scan ID: #{@scan_id}")
 
-      puts("Running Nuclei for Scan_Id: #{@scan_id}")
       stdout, stderr, status = Open3.capture3(*cmd)
       if status.success?
         vulnerabilities = parse_jsonl(stdout)
@@ -37,13 +31,33 @@ module Scanners
 
     private
 
-    def parse_jsonl(raw_output)
-      raw_output.each_line.map do |line|
+    def build_command
+      template_path = @parameters["template_path"]
+      severity = @parameters["severity"]
+
+      cmd = [
+        "docker", "run", "--rm",
+        "-i",
+        "projectdiscovery/nuclei:latest",
+        "-u", @target_url,
+        "-jsonl",
+        "-silent",
+        "-nc"
+      ]
+
+      cmd += ["-t", template_path] if template_path.present?
+      cmd += ["-severity", severity] if severity.present?
+
+      cmd
+    end
+
+    def parse_jsonl(raw)
+      raw.each_line.map do |line|
         next if line.strip.empty?
         begin
           JSON.parse(line.strip)
         rescue JSON::ParserError => e
-          Rails.logger.warn "Invalid JSON line in Nuclei output: #{e.message}"
+          Rails.logger.warn "Invalid JSON line from Nuclei: #{e.message}"
           nil
         end
       end.compact
@@ -67,54 +81,58 @@ module Scanners
         info:     vulnerables.count { |v| v.dig("info", "severity") == "info" }
       }
 
-      first_vuln = vulnerables.first || {}
+      first = vulnerables.first || {}
 
       {
-        scan_id: @scan_id,
-        status: "completed",
         summary: summary,
         target_updates: {
-          ip: first_vuln["ip"],
-          host: first_vuln["host"],
-          scheme: first_vuln["scheme"],
-          port: first_vuln["port"]
+          ip: first["ip"],
+          host: first["host"],
+          scheme: first["scheme"],
+          port: first["port"]
         },
         vulnerabilities: vulnerables.map { |v| parse_vulnerability(v) }
       }
     end
 
-    def parse_vulnerability(vuln)
-      info = vuln["info"] || {}
+    def parse_vulnerability(v)
+      info = v["info"] || {}
       classification = info["classification"] || {}
 
       base = {
-        template_id: vuln["template-id"],
-        name: info["name"] || "Unknown Vulnerability",
-        severity: info["severity"] || "info",
+        template_id: v["template-id"],
+        name: info["name"],
+        severity: info["severity"],
         description: info["description"].to_s.strip,
-        matched_at: vuln["matched-at"] || vuln["url"] || vuln["host"],
+        matched_at: v["matched-at"] || v["url"] || v["host"],
         cwe_ids: extract_cwe_ids(classification),
         references: info["reference"] || []
       }
 
-      evidence = {}
-      if vuln["extracted-results"].present?
-        evidence = { type: "extracted", resources: vuln["extracted-results"] }
-      elsif vuln["interaction"].present?
-        interaction = vuln["interaction"]
-        evidence = {
+      base.merge(evidence: extract_evidence(v))
+    end
+
+    def extract_evidence(v)
+      if v["extracted-results"].present?
+        {
+          type: "extracted",
+          resources: v["extracted-results"]
+        }
+      elsif v["interaction"].present?
+        interaction = v["interaction"]
+        {
           type: "oast",
           interaction_domain: interaction["full-id"],
           remote_ip: interaction["remote-address"]
         }
-      elsif vuln["curl-command"].present?
-        evidence = { type: "curl", command: vuln["curl-command"] }
+      elsif v["curl-command"].present?
+        {
+          type: "curl",
+          command: v["curl-command"]
+        }
+      else
+        nil
       end
-
-      base.merge(
-        evidence: evidence.presence,
-        curl_command: vuln["curl-command"]
-      )
     end
   end
 end

@@ -7,7 +7,8 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
-  namespace :scans do
-    post 'start', to: 'scans#start'
-  end
+  # namespace :scans do
+  #   post 'start', to: 'scans#start'
+  # end
+  post 'scans/start', to: 'scan#start'
 end
