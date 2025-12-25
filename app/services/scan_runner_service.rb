@@ -10,7 +10,6 @@ class ScanRunnerService
   SCANNERS = {
     "NUCLEI" => Scanners::NucleiService,
     "ZAP"    => Scanners::ZapService,
-    "NIKTO"  => Scanners::NiktoService
   }.freeze
 
   def initialize(params)

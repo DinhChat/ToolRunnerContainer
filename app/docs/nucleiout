@@ -1,0 +1,293 @@
+{
+  "scanId": "scan-123",
+  "status": "COMPLETED",
+  "completedAt": "2025-12-23T17:04:40+00:00",
+  "results": {
+    "nuclei": {
+      "status": "COMPLETED",
+      "summary": {
+        "total": 50,
+        "critical": 0,
+        "high": 0,
+        "medium": 1,
+        "low": 2,
+        "info": 46
+      },
+      "target_updates": {
+        "ip": null,
+        "host": "phimchua.online",
+        "scheme": null,
+        "port": null
+      },
+      "vulnerabilities": [
+        {
+          "template_id": "dns-waf-detect",
+          "name": "DNS WAF Detection",
+          "severity": "info",
+          "description": "A DNS WAF was detected.",
+          "matched_at": "phimchua.online",
+          "cwe_ids": [
+            200
+          ],
+          "references": [],
+          "evidence": null
+        },
+        {
+          "template_id": "ingress-nginx-valid-admission",
+          "name": "Kubernetes Ingress-Nginx Valid AdmissionReview - Detection",
+          "severity": "unknown",
+          "description": "Sends a valid minimal AdmissionReview JSON to reliably detect Kubernetes Ingress-Nginx Admission webhook endpoints.",
+          "matched_at": "https://phimchua.online/validate",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "curl",
+            "command": "curl -X 'POST' -d '{\\r\\n \"kind\": \"AdmissionReview\",\\r\\n \"apiVersion\": \"admission.k8s.io/v1\",\\r\\n \"request\": {\\r\\n \"uid\": \"tx446\",\\r\\n \"kind\": {\\r\\n \"group\": \"networking.k8s.io\",\\r\\n \"version\": \"v1\",\\r\\n \"kind\": \"Ingress\"\\r\\n },\\r\\n \"operation\": \"CREATE\",\\r\\n \"object\": {\\r\\n \"metadata\": {\\r\\n \"name\": \"test-tx446\",\\r\\n \"namespace\": \"default\"\\r\\n },\\r\\n \"spec\": {\\r\\n \"rules\": [\\r\\n {\\r\\n \"host\": \"example.com\",\\r\\n \"http\": {\\r\\n \"paths\": []\\r\\n }\\r\\n }\\r\\n ]\\r\\n }\\r\\n }\\r\\n }\\r\\n}' -H 'Content-Type: application/json' -H 'Host: phimchua.online' -H 'User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0' 'https://phimchua.online/validate'"
+          }
+        },
+        {
+          "template_id": "missing-sri",
+          "name": "Missing Subresource Integrity",
+          "severity": "info",
+          "description": "Checks if external script and stylesheet tags in the HTML response are missing the Subresource Integrity (SRI) attribute.",
+          "matched_at": "https://phimchua.online",
+          "cwe_ids": [],
+          "references": [
+            "https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.html#subresource-integrity",
+            "https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "https://www.googletagmanager.com/gtag/js?id=G-YZCMHGHC6B",
+              "https://fonts.googleapis.com/css?family=Roboto:400,300,500"
+            ]
+          }
+        },
+        {
+          "template_id": "waf-detect",
+          "name": "WAF Detection",
+          "severity": "info",
+          "description": "A web application firewall was detected.",
+          "matched_at": "https://phimchua.online",
+          "cwe_ids": [
+            200
+          ],
+          "references": [
+            "https://github.com/Ekultek/WhatWaf"
+          ],
+          "evidence": {
+            "type": "curl",
+            "command": "curl -X 'POST' -d '_=<script>alert(1)</script>' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Host: phimchua.online' -H 'User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0' 'https://phimchua.online'"
+          }
+        },
+        {
+          "template_id": "deprecated-tls",
+          "name": "Deprecated TLS Detection",
+          "severity": "info",
+          "description": "Both TLS 1.1 and SSLv3 are deprecated in favor of stronger encryption.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [
+            "https://ssl-config.mozilla.org/#config=intermediate"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls11"
+            ]
+          }
+        },
+        {
+          "template_id": "tls-version",
+          "name": "TLS Version - Detect",
+          "severity": "info",
+          "description": "TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.\nIt is important to detect the TLS version in order to ensure secure communication between two computers or servers.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls10"
+            ]
+          }
+        },
+        {
+          "template_id": "deprecated-tls",
+          "name": "Deprecated TLS Detection",
+          "severity": "info",
+          "description": "Both TLS 1.1 and SSLv3 are deprecated in favor of stronger encryption.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [
+            "https://ssl-config.mozilla.org/#config=intermediate"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls10"
+            ]
+          }
+        },
+        {
+          "template_id": "tls-version",
+          "name": "TLS Version - Detect",
+          "severity": "info",
+          "description": "TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.\nIt is important to detect the TLS version in order to ensure secure communication between two computers or servers.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls11"
+            ]
+          }
+        },
+        {
+          "template_id": "tls-version",
+          "name": "TLS Version - Detect",
+          "severity": "info",
+          "description": "TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.\nIt is important to detect the TLS version in order to ensure secure communication between two computers or servers.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls12"
+            ]
+          }
+        },
+        {
+          "template_id": "weak-cipher-suites",
+          "name": "Weak Cipher Suites Detection",
+          "severity": "low",
+          "description": "A weak cipher is defined as an encryption/decryption algorithm that uses a key of insufficient length. Using an insufficient length for a key in an encryption/decryption algorithm opens up the possibility (or probability) that the encryption scheme could be broken.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [
+            "https://www.acunetix.com/vulnerabilities/web/tls-ssl-weak-cipher-suites/",
+            "http://ciphersuite.info"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "[tls10 TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA]"
+            ]
+          }
+        },
+        {
+          "template_id": "tls-version",
+          "name": "TLS Version - Detect",
+          "severity": "info",
+          "description": "TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.\nIt is important to detect the TLS version in order to ensure secure communication between two computers or servers.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "tls13"
+            ]
+          }
+        },
+        {
+          "template_id": "weak-cipher-suites",
+          "name": "Weak Cipher Suites Detection",
+          "severity": "low",
+          "description": "A weak cipher is defined as an encryption/decryption algorithm that uses a key of insufficient length. Using an insufficient length for a key in an encryption/decryption algorithm opens up the possibility (or probability) that the encryption scheme could be broken.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [
+            "https://www.acunetix.com/vulnerabilities/web/tls-ssl-weak-cipher-suites/",
+            "http://ciphersuite.info"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "[tls11 TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA]"
+            ]
+          }
+        },
+        {
+          "template_id": "options-method",
+          "name": "Allowed Options Method",
+          "severity": "info",
+          "description": "",
+          "matched_at": "https://phimchua.online",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "GET,HEAD"
+            ]
+          }
+        },
+        {
+          "template_id": "backpack-admin-panel",
+          "name": "Laravel Backpack Admin Login Panel - Detect",
+          "severity": "info",
+          "description": "Laravel Backpack admin login panel was detected.",
+          "matched_at": "https://phimchua.online/admin/login",
+          "cwe_ids": [
+            200
+          ],
+          "references": [],
+          "evidence": {
+            "type": "curl",
+            "command": "curl -X 'GET' -d '' -H 'Accept: */*' -H 'Accept-Language: en' -H 'User-Agent: Mozilla/5.0 (Macintosh, Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Safari/605.1.15' 'https://phimchua.online/admin/login'"
+          }
+        },
+        {
+          "template_id": "http-missing-security-headers",
+          "name": "HTTP Missing Security Headers",
+          "severity": "info",
+          "description": "This template searches for missing HTTP security headers. The impact of these missing headers can vary.",
+          "matched_at": "https://phimchua.online",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "curl",
+            "command": "curl -X 'GET' -d '' -H 'Accept: */*' -H 'Accept-Language: en' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0' 'https://phimchua.online'"
+          }
+        },
+        // (Các entry http-missing-security-headers khác đã được bỏ bớt để ngắn gọn, thực tế vẫn đầy đủ như dữ liệu gốc)
+        {
+          "template_id": "laravel-debug-enabled",
+          "name": "Laravel Debug Enabled",
+          "severity": "medium",
+          "description": "Laravel with APP_DEBUG set to true is prone to show verbose errors.",
+          "matched_at": "https://phimchua.online/_ignition/health-check",
+          "cwe_ids": [],
+          "references": [],
+          "evidence": {
+            "type": "curl",
+            "command": "curl -X 'GET' -d '' -H 'Accept: */*' -H 'Accept-Language: en' -H 'User-Agent: Mozilla/5.0 (Windows NT 6.2; rv:28.0) Gecko/20100101 Firefox/28.0' 'https://phimchua.online/_ignition/health-check'"
+          }
+        },
+        // ... các vulnerability còn lại (robots-txt, rdap-whois, sitemap-detect, missing-cookie-samesite-strict, fingerprinthub-web-fingerprints, tech-detect, v.v.)
+        {
+          "template_id": "wildcard-tls",
+          "name": "Wildcard TLS Certificate",
+          "severity": "info",
+          "description": "Checks a sites certificate to see if there are wildcard CN or SAN entries.",
+          "matched_at": "phimchua.online:443",
+          "cwe_ids": [],
+          "references": [
+            "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html#carefully-consider-the-use-of-wildcard-certificates"
+          ],
+          "evidence": {
+            "type": "extracted",
+            "resources": [
+              "CN: phimchua.online",
+              " SAN: [phimchua.online *.phimchua.online]"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

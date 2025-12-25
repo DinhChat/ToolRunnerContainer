@@ -1,0 +1,11 @@
+curl -X POST "http://localhost:3000/scans/start/"   -H "Content-Type: application/json"   -d '{
+      "scan_id": "scan-123",
+      "target_url": "http://ads.mocha.com.vn",
+      "scan_tools": ["nuclei"],
+      "callback_url": "http://localhost:4000/api/scan/callback",
+      "scan_parameters": {
+        "nuclei": {
+          "severity": "high,critical"
+        }
+      }
+    }'
