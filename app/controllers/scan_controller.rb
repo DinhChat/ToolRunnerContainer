@@ -2,12 +2,12 @@
 
 class ScanController < ApplicationController
   wrap_parameters false
-  skip_before_action :verify_authenticity_token, only: [:start]
+  # skip_before_action :verify_authenticity_token, only: [:start]
   #POST /Scan/start
   def start
     service = ScanRunnerService.new(scan_params)
 
-    if Rails.env.development? || Rails.env.test?
+    if Rails.env.test?
       results = service.run_all_scans
       render_success_response("Scan completed synchronously", results)
     else
