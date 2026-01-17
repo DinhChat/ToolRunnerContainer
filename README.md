@@ -1,26 +1,52 @@
-# README
+# Ruby version: 3.4.5
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+# How to build ruby on rails environment:
+## Ubuntu:
+```bash
+sudo apt update
+sudo apt install build-essential rustc libssl-dev libyaml-dev zlib1g-dev libgmp-dev git
+curl https://mise.run | sh
+echo 'eval "$(~/.local/bin/mise activate)"' >> ~/.bashrc
+source ~/.bashrc
+mise use -g ruby@3.4.5
 
-Things you may want to cover:
+gem install rails
+```
 
-* Ruby version
+## RHEL:
+```bash
+yum install -y gcc-c++ patch readline readline-devel \
+    zlib zlib-devel libyaml-devel libffi-devel openssl-devel \
+    make bzip2 autoconf automake libtool bison sqlite-devel
 
-* System dependencies
+git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
+echo 'eval "$(rbenv init -)"' >> ~/.bash_profile
+source ~/.bash_profile
 
-* Configuration
+git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
 
-* Database creation
+rbenv install 3.4.5
 
-* Database initialization
+gem install rails -v 8.0
+```
+# How to build environment for this service:
+```bash
+install docker:
+apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+add user run service to the docker group: usermod -aG docker $USER
+restart user session
+```
 
-* How to run the test suite
+# Run service:
+```bash
+cd /ToolRunnerContainer
+bundle install
+rails s -p 3000
+```
 
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
-docker build -t tool-sandbox-app:latest . 
-docker run -d -p 3000:3000 -e RAILS_MASTER_KEY=5baaa1f270c4e9d07b0f4c1efea8f892 -v /var/run/docker.sock:/var/run/docker.sock --name tool_sandbox --group-add 988 tool-sandbox-app:latest
+# Case run service in KVM/QEMU: Mount folder
+```bash
+sudo mkdir -p /mnt/shared
+sudo mount -t virtiofs project /mnt/shared
+```
