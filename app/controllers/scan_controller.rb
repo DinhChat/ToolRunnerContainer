@@ -16,7 +16,7 @@ class ScanController < ApplicationController
 
       render json: {
         status: "QUEUED",
-        scan_id: scan_params[:scan_id],
+        scan_id: scan_params[:scan_id].to_s,
         message: "Scan queued successfully (Active Job)",
         queued_at: Time.current.iso8601
       }, status: :accepted

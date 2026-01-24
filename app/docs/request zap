@@ -1,6 +1,6 @@
 curl -X POST "http://localhost:3000/scans/start/"   -H "Content-Type: application/json"   -d '{
   "scan_id": "zap-001",
-  "target_url": "https://phimchua.online",
+  "target_url": "https://server.dinhchat.id.vn",
   "scan_tools": ["zap"],
   "callback_url": "http://localhost:4000/api/scan/callback",
   "scan_parameters": {

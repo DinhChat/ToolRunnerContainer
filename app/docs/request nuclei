@@ -9,3 +9,25 @@ curl -X POST "http://localhost:3000/scans/start/"   -H "Content-Type: applicatio
         }
       }
     }'
+
+    {
+            status: "QUEUED",
+            scan_id: scan_params[:scan_id],
+            message: "Scan queued successfully (Active Job)",
+            queued_at: Time.current.iso8601
+    }
+
+
+    curl -X POST "http://localhost:8080/api/scans/application/1" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <JWT_TOKEN>" \
+      -d '{
+        "scanTools": [
+          { "name": "nuclei" },
+          { "name": "zap" }
+        ],
+        "applicationUrl": "http://ads.mocha.com.vn",
+        "applicationName": "Mocha Ads",
+        "applicationType": "WEB",
+        "applicationDescription": "Mocha advertising platform"
+      }'
